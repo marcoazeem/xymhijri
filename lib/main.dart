@@ -643,11 +643,16 @@ class _CalendarPageState extends State<CalendarPage> {
       itemCount: meta.cells.length,
       itemBuilder: (context, index) {
         final _CalendarCellData cell = meta.cells[index];
+        final DateTime now = DateTime.now();
         final bool isSelected =
             cell.inCurrentMonth &&
             cell.hYear == _currentYear &&
             cell.hMonth == _currentMonth &&
             cell.hDay == _selectedDay;
+        final bool isToday =
+            cell.gDate.year == now.year &&
+            cell.gDate.month == now.month &&
+            cell.gDate.day == now.day;
 
         final String holidayKey = '${cell.hMonth}/${cell.hDay}';
         final bool isHoliday = _holidays.containsKey(holidayKey);
@@ -681,9 +686,14 @@ class _CalendarPageState extends State<CalendarPage> {
             decoration: BoxDecoration(
               color: isSelected ? const Color(0xFFE1DCC8) : Colors.transparent,
               borderRadius: BorderRadius.circular(14),
-              border: isSelected
-                  ? Border.all(color: const Color(0xFFD2CBB1))
-                  : Border.all(color: Colors.transparent),
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFFD2CBB1)
+                    : (isToday
+                          ? const Color(0xFF3E6B5C)
+                          : Colors.transparent),
+                width: isToday ? 1.6 : 1,
+              ),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
