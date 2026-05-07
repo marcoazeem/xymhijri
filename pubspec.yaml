@@ -38,7 +38,7 @@ dependencies:
   excel: ^4.0.6
   path_provider: ^2.1.5
   share_plus: ^12.0.1
-  google_fonts: ^6.3.0
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
@@ -63,9 +63,9 @@ flutter:
   uses-material-design: true
 
   fonts:
-    - family: KfgqpcUthmanic
+    - family: Hafs
       fonts:
-        - asset: 'assets/KFGQPC Uthmanic Script HAFS Regular.otf'
+        - asset: assets/hafs.ttf
     - family: Faseyha
       fonts:
         - asset: assets/faseyha.ttf

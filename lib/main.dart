@@ -4,9 +4,15 @@ import 'package:excel/excel.dart' as excel_pkg;
 import 'package:flutter/material.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'hijri_date.dart';
+
+const String _offsetPrefsKey = 'hijri_offset';
+
 void main() {
+  HijriCalendar.setLocal('ar');
   runApp(const HijriCalendarApp());
 }
 
@@ -98,7 +104,29 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   void initState() {
     super.initState();
-    _jumpToToday();
+    final HijriCalendar now = HijriCalendar.now();
+    _currentYear = now.hYear;
+    _currentMonth = now.hMonth;
+    _selectedDay = now.hDay;
+    _loadOffset();
+  }
+
+  Future<void> _loadOffset() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getInt(_offsetPrefsKey);
+    if (stored != null && stored != _offset && mounted) {
+      setState(() => _offset = stored);
+    }
+  }
+
+  Future<void> _saveOffset() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_offsetPrefsKey, _offset);
+  }
+
+  void _changeOffset(int delta) {
+    setState(() => _offset += delta);
+    _saveOffset();
   }
 
   void _jumpToToday() {
@@ -130,22 +158,11 @@ class _CalendarPageState extends State<CalendarPage> {
     });
   }
 
-  DateTime _hijriToGregorianWithOffset(int year, int month, int day) {
-    final HijriCalendar hDate = HijriCalendar()
-      ..hYear = year
-      ..hMonth = month
-      ..hDay = day;
+  DateTime _hijriToGregorianWithOffset(int year, int month, int day) =>
+      hijriToGregorianWithOffset(year, month, day, _offset);
 
-    DateTime gDate = hDate.hijriToGregorian(year, month, day);
-    gDate = gDate.add(Duration(days: _offset));
-    return gDate;
-  }
-
-  int _getMonthLength(int year, int month) {
-    final DateTime gDate = _hijriToGregorianWithOffset(year, month, 1);
-    final HijriCalendar corrected = HijriCalendar.fromDate(gDate);
-    return corrected.lengthOfMonth;
-  }
+  int _getMonthLength(int year, int month) =>
+      hijriMonthLength(year, month, _offset);
 
   _CalendarMeta _buildMeta() {
     final DateTime firstDayG = _hijriToGregorianWithOffset(
@@ -341,9 +358,12 @@ class _CalendarPageState extends State<CalendarPage> {
         final File file = File(path);
         await file.writeAsBytes(fileBytes);
 
-        await Share.shareXFiles([
-          XFile(path),
-        ], text: 'Hijri Calendar $_currentYear');
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(path)],
+            text: 'Hijri Calendar $_currentYear',
+          ),
+        );
       }
 
       if (mounted) {
@@ -369,8 +389,6 @@ class _CalendarPageState extends State<CalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    HijriCalendar.setLocal('ar');
-
     final _CalendarMeta meta = _buildMeta();
     final _CalendarCellData selected = meta.cells.firstWhere(
       (cell) =>
@@ -534,7 +552,7 @@ class _CalendarPageState extends State<CalendarPage> {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.65),
+        color: Colors.white.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE6E2CC)),
       ),
@@ -722,7 +740,7 @@ class _CalendarPageState extends State<CalendarPage> {
   Widget _buildBottomActions() {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
+        color: Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
@@ -735,13 +753,13 @@ class _CalendarPageState extends State<CalendarPage> {
               style: const TextStyle(color: Color(0xFF6B6B65), fontSize: 12),
             ),
             IconButton(
-              onPressed: () => setState(() => _offset--),
+              onPressed: () => _changeOffset(-1),
               icon: const Icon(Icons.remove_circle_outline, size: 18),
               color: const Color(0xFF6B6B65),
               visualDensity: VisualDensity.compact,
             ),
             IconButton(
-              onPressed: () => setState(() => _offset++),
+              onPressed: () => _changeOffset(1),
               icon: const Icon(Icons.add_circle_outline, size: 18),
               color: const Color(0xFF6B6B65),
               visualDensity: VisualDensity.compact,
@@ -921,16 +939,15 @@ class _CalendarPageState extends State<CalendarPage> {
     FontWeight weight = FontWeight.w500,
   }) {
     return TextStyle(
-      fontFamily: 'KfgqpcUthmanic',
+      fontFamily: 'Hafs',
       fontSize: size,
       color: color,
       fontWeight: weight,
-      height: 1.05,
+      height: 1.0,
       fontFeatures: const [
         FontFeature.enable('rlig'),
         FontFeature.enable('liga'),
         FontFeature.enable('calt'),
-        FontFeature.enable('ccmp'),
         FontFeature.enable('mark'),
         FontFeature.enable('mkmk'),
       ],
